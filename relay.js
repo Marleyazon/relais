@@ -97,7 +97,7 @@ wss.on('connection', (ws) => {
       ff = spawn('ffmpeg', args);
       let said = false;
       ff.stderr.on('data', (d) => {
-        process.stdout.write(d);
+        process.stdout.write(d.toString().replace(/(rtmps?:\/\/[^\s'"]*\/)[^\s'"\/]+/g, '$1****'));
         const txt = d.toString();
         if (!said && /Output #0/.test(txt)) { said = true; try { ws.send(JSON.stringify({ t: 'ready' })); } catch (e) {} }
         const m = txt.match(/(Connection (refused|reset|timed out)|Input\/output error|Server returned [^\n]*|Failed to [^\n]*|Invalid data[^\n]*|Error[^\n]*)/i);
