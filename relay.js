@@ -76,7 +76,7 @@ wss.on('connection', (ws) => {
 
       const args = cfg.copy
         ? [
-            '-loglevel', 'warning',
+            '-loglevel', 'info',
             '-fflags', '+genpts+nobuffer',
             '-i', 'pipe:0',
             '-c:v', 'copy',
@@ -84,7 +84,7 @@ wss.on('connection', (ws) => {
             '-f', 'flv', cfg.url
           ]
         : [
-            '-loglevel', 'warning',
+            '-loglevel', 'info',
             '-i', 'pipe:0',
             '-vf', "scale=-2:'min(720,ih)'",
             '-c:v', 'libx264', '-preset', 'ultrafast', '-tune', 'zerolatency',
@@ -95,7 +95,14 @@ wss.on('connection', (ws) => {
             '-f', 'flv', cfg.url
           ];
       ff = spawn('ffmpeg', args);
-      ff.stderr.on('data', (d) => process.stdout.write(d));
+      let said = false;
+      ff.stderr.on('data', (d) => {
+        process.stdout.write(d);
+        const txt = d.toString();
+        if (!said && /Output #0/.test(txt)) { said = true; try { ws.send(JSON.stringify({ t: 'ready' })); } catch (e) {} }
+        const m = txt.match(/(Connection (refused|reset|timed out)|Input\/output error|Server returned [^\n]*|Failed to [^\n]*|Invalid data[^\n]*|Error[^\n]*)/i);
+        if (m) { try { ws.send(JSON.stringify({ t: 'err', msg: m[0].slice(0, 160) })); } catch (e) {} }
+      });
       ff.on('close', (code) => {
         console.log('ffmpeg terminé (code ' + code + ')');
         ff = null;
